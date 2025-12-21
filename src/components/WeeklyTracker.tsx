@@ -147,40 +147,41 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
             <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee' }}>
                 <Table size="small">
                     <TableHead>
-                        <TableCell sx={{ pl: 1, pr: 0.5, py: 0.5, fontSize: '0.75rem' }}>Objectif</TableCell>
-                        {DAYS.map(d => <TableCell key={d} align="center" padding="none" sx={{ width: 32, fontSize: '0.75rem' }}>{d[0]}</TableCell>)}
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {objectives.map(obj => (
-                        <TableRow key={obj.id}>
-                            <TableCell component="th" scope="row" sx={{ fontSize: '0.75rem', pl: 1, pr: 0.5, py: 0.5 }}>
-                                {obj.title}
-                            </TableCell>
-                            {DAYS.map((_, index) => {
-                                const dateObj = new Date(currentWeekStart);
-                                dateObj.setDate(dateObj.getDate() + index);
-                                const dateStr = dateObj.toISOString().split('T')[0];
-                                const log = logs.find(l => l.objective_id === obj.id && l.date === dateStr);
-                                const isDone = log?.is_completed;
-
-                                return (
-                                    <TableCell key={index} align="center" padding="none">
-                                        <Checkbox
-                                            checked={!!isDone}
-                                            onChange={() => handleToggle(obj.id, index)}
-                                            icon={<RadioButtonUncheckedIcon fontSize="small" color="action" />}
-                                            checkedIcon={<CheckCircleIcon fontSize="small" color="success" />}
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                );
-                            })}
+                        <TableRow>
+                            <TableCell sx={{ pl: 1, pr: 0.5, py: 0.5, fontSize: '0.75rem' }}>Objectif</TableCell>
+                            {DAYS.map(d => <TableCell key={d} align="center" padding="none" sx={{ width: 32, fontSize: '0.75rem' }}>{d[0]}</TableCell>)}
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                        {objectives.map(obj => (
+                            <TableRow key={obj.id}>
+                                <TableCell component="th" scope="row" sx={{ fontSize: '0.75rem', pl: 1, pr: 0.5, py: 0.5 }}>
+                                    {obj.title}
+                                </TableCell>
+                                {DAYS.map((_, index) => {
+                                    const dateObj = new Date(currentWeekStart);
+                                    dateObj.setDate(dateObj.getDate() + index);
+                                    const dateStr = dateObj.toISOString().split('T')[0];
+                                    const log = logs.find(l => l.objective_id === obj.id && l.date === dateStr);
+                                    const isDone = log?.is_completed;
+
+                                    return (
+                                        <TableCell key={index} align="center" padding="none">
+                                            <Checkbox
+                                                checked={!!isDone}
+                                                onChange={() => handleToggle(obj.id, index)}
+                                                icon={<RadioButtonUncheckedIcon fontSize="small" color="action" />}
+                                                checkedIcon={<CheckCircleIcon fontSize="small" color="success" />}
+                                                size="small"
+                                            />
+                                        </TableCell>
+                                    );
+                                })}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
         </Box >
     );
 }
