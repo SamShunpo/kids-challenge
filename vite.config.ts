@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/kids-challenge/', // Fixes 404 on GitHub Pages
   plugins: [
     react(),
     VitePWA({
