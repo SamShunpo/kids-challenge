@@ -12,6 +12,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 interface Objective {
     id: string;
     title: string;
+    deleted_at?: string | null;
 }
 
 interface WeeklyTrackerProps {
@@ -106,11 +107,17 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
         }
     };
 
+    // filter objectives active for this week
+    const activeObjectives = objectives.filter(obj => {
+        if (!obj.deleted_at) return true;
+        return new Date(obj.deleted_at) > currentWeekStart;
+    });
+
     // Scoring Logic
     let score = 0;
     let perfectObjectives = 0;
 
-    objectives.forEach(obj => {
+    activeObjectives.forEach(obj => {
         const completedDays = logs.filter(l => l.objective_id === obj.id && l.is_completed).length;
         if (completedDays === 7) {
             score += 1;
@@ -118,7 +125,7 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
         }
     });
 
-    const isPerfectWeek = objectives.length > 0 && perfectObjectives === objectives.length;
+    const isPerfectWeek = activeObjectives.length > 0 && perfectObjectives === activeObjectives.length;
     if (isPerfectWeek) {
         score = perfectObjectives * 2;
     }
@@ -153,7 +160,7 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {objectives.map(obj => (
+                        {activeObjectives.map(obj => (
                             <TableRow key={obj.id}>
                                 <TableCell component="th" scope="row" sx={{ fontSize: '0.75rem', pl: 1, pr: 0.5, py: 0.5 }}>
                                     {obj.title}

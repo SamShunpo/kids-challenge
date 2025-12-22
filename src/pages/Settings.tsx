@@ -22,6 +22,7 @@ interface Objective {
   title: string;
   description?: string;
   child_id?: string | null; // null = all
+  deleted_at?: string | null;
 }
 
 export default function Settings() {
@@ -123,9 +124,16 @@ export default function Settings() {
   };
 
   const handleDeleteObjective = async (id: string) => {
-    if (!confirm('Êtes-vous sûr ? Tout l\'historique pour cet objectif sera perdu.')) return;
-    const { error } = await supabase.from('objectives').delete().eq('id', id);
-    if (!error) setObjectives(objectives.filter(o => o.id !== id));
+    if (!confirm('Êtes-vous sûr ? L\'objectif sera archivé mais restera visible dans l\'historique.')) return;
+    const { error } = await supabase
+      .from('objectives')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (!error) {
+      // Update local state to reflect soft delete (remove from active list)
+      setObjectives(objectives.map(o => o.id === id ? { ...o, deleted_at: new Date().toISOString() } : o));
+    }
   };
 
   const getChildName = (id?: string | null) => {
@@ -183,8 +191,8 @@ export default function Settings() {
           </Button>
         </Box>
         <List sx={{ bgcolor: 'background.paper', borderRadius: 2 }}>
-          {objectives.length === 0 && <ListItem><ListItemText secondary="Aucun objectif." /></ListItem>}
-          {objectives.map((obj) => (
+          {objectives.filter(o => !o.deleted_at).length === 0 && <ListItem><ListItemText secondary="Aucun objectif." /></ListItem>}
+          {objectives.filter(o => !o.deleted_at).map((obj) => (
             <ListItem
               key={obj.id}
               secondaryAction={
