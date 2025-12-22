@@ -43,38 +43,19 @@ export default function Dashboard() {
         }
     };
 
-    const [transactions, setTransactions] = useState<any[]>([]);
-    const [allLogs, setAllLogs] = useState<any[]>([]);
-    const [spendAmount, setSpendAmount] = useState('');
-    const [spendReason, setSpendReason] = useState('');
-    const [pointsProcessing, setPointsProcessing] = useState(false);
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
     useEffect(() => {
         if (children.length > 0) {
             fetchChildHistory(children[tabIndex].id);
         }
     }, [tabIndex, children]);
 
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const [childRes, objRes] = await Promise.all([
-                supabase.from('children').select('id, name').order('created_at'),
-                supabase.from('objectives').select('id, title, child_id, deleted_at').order('created_at')
-            ]);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [allLogs, setAllLogs] = useState<any[]>([]);
+    const [spendAmount, setSpendAmount] = useState('');
+    const [spendReason, setSpendReason] = useState('');
+    const [pointsProcessing, setPointsProcessing] = useState(false);
 
-            if (childRes.data) setChildren(childRes.data);
-            if (objRes.data) setObjectives(objRes.data);
-        } catch (error) {
-            console.error('Error init dashboard:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+
 
     const fetchChildHistory = async (childId: string) => {
         const [logsRes, txRes] = await Promise.all([
