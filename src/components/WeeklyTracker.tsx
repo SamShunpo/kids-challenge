@@ -51,16 +51,26 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
         try {
             setLoading(true);
             // Calc week range
-            const start = currentWeekStart.toISOString();
-            const end = new Date(currentWeekStart);
-            end.setDate(end.getDate() + 7);
+            // Use local dates for query
+            const startObj = new Date(currentWeekStart);
+            const sy = startObj.getFullYear();
+            const sm = String(startObj.getMonth() + 1).padStart(2, '0');
+            const sd = String(startObj.getDate()).padStart(2, '0');
+            const start = `${sy}-${sm}-${sd}`;
+
+            const endObj = new Date(currentWeekStart);
+            endObj.setDate(endObj.getDate() + 7);
+            const ey = endObj.getFullYear();
+            const em = String(endObj.getMonth() + 1).padStart(2, '0');
+            const ed = String(endObj.getDate()).padStart(2, '0');
+            const end = `${ey}-${em}-${ed}`;
 
             const { data, error } = await supabase
                 .from('daily_logs')
                 .select('*')
                 .eq('child_id', childId)
                 .gte('date', start)
-                .lt('date', end.toISOString());
+                .lt('date', end);
 
             if (error) throw error;
             setLogs(data || []);
@@ -74,7 +84,11 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
     const handleToggle = async (objectiveId: string, dayIndex: number) => {
         const dateObj = new Date(currentWeekStart);
         dateObj.setDate(dateObj.getDate() + dayIndex);
-        const dateStr = dateObj.toISOString().split('T')[0];
+        // Use local date string YYYY-MM-DD
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
 
         const existing = logs.find(l =>
             l.objective_id === objectiveId &&
@@ -168,7 +182,12 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
                                 {DAYS.map((_, index) => {
                                     const dateObj = new Date(currentWeekStart);
                                     dateObj.setDate(dateObj.getDate() + index);
-                                    const dateStr = dateObj.toISOString().split('T')[0];
+
+                                    const year = dateObj.getFullYear();
+                                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                    const day = String(dateObj.getDate()).padStart(2, '0');
+                                    const dateStr = `${year}-${month}-${day}`;
+
                                     const log = logs.find(l => l.objective_id === obj.id && l.date === dateStr);
                                     const isDone = log?.is_completed;
 
