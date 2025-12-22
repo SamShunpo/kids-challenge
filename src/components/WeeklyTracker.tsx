@@ -18,6 +18,7 @@ interface Objective {
 interface WeeklyTrackerProps {
     childId: string;
     objectives: Objective[];
+    onUpdate?: () => void;
 }
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -32,7 +33,7 @@ const getMonday = (d: Date) => {
     return monday;
 }
 
-export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProps) {
+export default function WeeklyTracker({ childId, objectives, onUpdate }: WeeklyTrackerProps) {
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentWeekStart, setCurrentWeekStart] = useState(getMonday(new Date()));
@@ -103,6 +104,7 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
 
             if (!error) {
                 setLogs(logs.filter(l => l.id !== existing.id));
+                onUpdate?.();
             }
         } else {
             const { data, error } = await supabase
@@ -117,6 +119,7 @@ export default function WeeklyTracker({ childId, objectives }: WeeklyTrackerProp
 
             if (!error && data) {
                 setLogs([...logs, data[0]]);
+                onUpdate?.();
             }
         }
     };

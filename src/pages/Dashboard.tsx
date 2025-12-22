@@ -219,6 +219,7 @@ export default function Dashboard() {
                             key={currentChild.id}
                             childId={currentChild.id}
                             objectives={filteredObjectives}
+                            onUpdate={() => fetchChildHistory(currentChild.id)}
                         />
 
                         <Divider sx={{ my: 4 }} />
