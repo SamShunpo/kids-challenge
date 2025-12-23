@@ -14,6 +14,7 @@ interface Objective {
     title: string;
     child_id?: string | null;
     deleted_at?: string | null;
+    created_at?: string;
 }
 
 export default function Dashboard() {
@@ -22,16 +23,30 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [tabIndex, setTabIndex] = useState(0);
 
+    const [exclusions, setExclusions] = useState<any[]>([]);
+
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [allLogs, setAllLogs] = useState<any[]>([]);
+    const [spendAmount, setSpendAmount] = useState('');
+    const [spendReason, setSpendReason] = useState('');
+    const [pointsProcessing, setPointsProcessing] = useState(false);
+
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (children.length > 0) {
+            fetchChildHistory(children[tabIndex].id);
+        }
+    }, [tabIndex, children]);
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const [childRes, objRes] = await Promise.all([
                 supabase.from('children').select('id, name').order('created_at'),
-                supabase.from('objectives').select('id, title, child_id, deleted_at').order('created_at')
+                supabase.from('objectives').select('id, title, child_id, deleted_at, created_at').order('created_at')
             ]);
 
             if (childRes.data) setChildren(childRes.data);
@@ -43,27 +58,16 @@ export default function Dashboard() {
         }
     };
 
-    useEffect(() => {
-        if (children.length > 0) {
-            fetchChildHistory(children[tabIndex].id);
-        }
-    }, [tabIndex, children]);
-
-    const [transactions, setTransactions] = useState<any[]>([]);
-    const [allLogs, setAllLogs] = useState<any[]>([]);
-    const [spendAmount, setSpendAmount] = useState('');
-    const [spendReason, setSpendReason] = useState('');
-    const [pointsProcessing, setPointsProcessing] = useState(false);
-
-
-
     const fetchChildHistory = async (childId: string) => {
-        const [logsRes, txRes] = await Promise.all([
+        const [logsRes, txRes, excRes] = await Promise.all([
             supabase.from('daily_logs').select('*').eq('child_id', childId),
-            supabase.from('point_transactions').select('*').eq('child_id', childId).order('created_at', { ascending: false })
+            supabase.from('point_transactions').select('*').eq('child_id', childId).order('created_at', { ascending: false }),
+            supabase.from('objective_exclusions').select('*')
         ]);
+
         if (logsRes.data) setAllLogs(logsRes.data);
         if (txRes.data) setTransactions(txRes.data || []);
+        if (excRes.data) setExclusions(excRes.data || []);
     };
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -219,6 +223,7 @@ export default function Dashboard() {
                             key={currentChild.id}
                             childId={currentChild.id}
                             objectives={filteredObjectives}
+                            exclusions={exclusions}
                             onUpdate={() => fetchChildHistory(currentChild.id)}
                         />
 

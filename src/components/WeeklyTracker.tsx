@@ -13,15 +13,19 @@ interface Objective {
     id: string;
     title: string;
     deleted_at?: string | null;
+    created_at?: string;
 }
 
 interface WeeklyTrackerProps {
     childId: string;
     objectives: Objective[];
+    exclusions: any[];
     onUpdate?: () => void;
 }
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 // Helper to get current week's Monday
 const getMonday = (d: Date) => {
@@ -33,7 +37,7 @@ const getMonday = (d: Date) => {
     return monday;
 }
 
-export default function WeeklyTracker({ childId, objectives, onUpdate }: WeeklyTrackerProps) {
+export default function WeeklyTracker({ childId, objectives, exclusions, onUpdate }: WeeklyTrackerProps) {
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentWeekStart, setCurrentWeekStart] = useState(getMonday(new Date()));
@@ -124,10 +128,89 @@ export default function WeeklyTracker({ childId, objectives, onUpdate }: WeeklyT
         }
     };
 
+    const handleExclude = async (objId: string) => {
+        if (!confirm("Masquer cet objectif pour cette semaine uniquement ?")) return;
+
+        // Convert currentWeekStart to YYYY-MM-DD
+        const d = new Date(currentWeekStart);
+        const sy = d.getFullYear();
+        const sm = String(d.getMonth() + 1).padStart(2, '0');
+        const sd = String(d.getDate()).padStart(2, '0');
+        const weekStr = `${sy}-${sm}-${sd}`;
+
+        try {
+            const { error } = await supabase.from('objective_exclusions').insert({
+                objective_id: objId,
+                week_start: weekStr,
+                child_id: childId
+            });
+
+            if (error) throw error;
+            onUpdate?.(); // Refresh dashboard to fetch new exclusions
+        } catch (e) {
+            console.error(e);
+            alert("Erreur lors de l'exclusion");
+        }
+    };
+
     // filter objectives active for this week
     const activeObjectives = objectives.filter(obj => {
-        if (!obj.deleted_at) return true;
-        return new Date(obj.deleted_at) > currentWeekStart;
+        // 1. Check Soft Delete
+        if (obj.deleted_at && new Date(obj.deleted_at) <= currentWeekStart) return false;
+
+        // 2. Check Exclusions
+        // exclusions might be passed as prop. 
+        // currentWeekStart needs to match exclusion week_start.
+        const startObj = new Date(currentWeekStart);
+        const sy = startObj.getFullYear();
+        const sm = String(startObj.getMonth() + 1).padStart(2, '0');
+        const sd = String(startObj.getDate()).padStart(2, '0');
+        const weekStr = `${sy}-${sm}-${sd}`;
+
+        const isExcluded = exclusions?.some(ex => ex.objective_id === obj.id && ex.week_start === weekStr);
+        if (isExcluded) return false;
+
+        // 3. Check Creation Date (Smart Start)
+        // Rule: If created on Mon, active this week. If Tue+, active next week.
+        if (obj.created_at) {
+            const created = new Date(obj.created_at);
+            // Get Monday of creation week
+            const day = created.getDay();
+            const diff = created.getDate() - day + (day === 0 ? -6 : 1);
+            const creationMon = new Date(created);
+            creationMon.setDate(diff);
+            creationMon.setHours(0, 0, 0, 0);
+
+            // If created AFTER this week's Monday, it's definitely not active yet (unless we are IN the creation week?)
+            // If currentWeekStart < creationMon, it's in future? No, we view past/future weeks.
+
+            // If currentWeekStart < effectiveStartWeek, hide.
+
+            let effectiveStart = new Date(creationMon);
+            // If created day is NOT Monday (1), add 7 days
+            // Actually, verify "Monday rule".
+            // "created on Monday -> start current week". 
+            // "created on Tuesday -> start next week".
+            // So if created.getDay() !== 1, effectiveStart = creationMon + 7 days.
+
+            // Note: getDay() 0=Sun, 1=Mon.
+            // If created on Sun (0), it belongs to "previous" week in JS sense (week starts Sun), but "this" week in ISO (starts Mon).
+            // Let's stick to the Monday calculation logic:
+            // creationMon is the Monday of the week the date falls in.
+            // If created date > creationMon (meaning Tue-Sun), then effective is next week.
+            // BUT: created is timestamp. creationMon is midnight.
+            // If created is Monday, created date is same day as creationMon.
+            // Just compare dates.
+
+            const isMonday = created.getDay() === 1;
+            if (!isMonday) {
+                effectiveStart.setDate(effectiveStart.getDate() + 7);
+            }
+
+            if (currentWeekStart < effectiveStart) return false;
+        }
+
+        return true;
     });
 
     // Scoring Logic
@@ -180,7 +263,12 @@ export default function WeeklyTracker({ childId, objectives, onUpdate }: WeeklyT
                         {activeObjectives.map(obj => (
                             <TableRow key={obj.id}>
                                 <TableCell component="th" scope="row" sx={{ fontSize: '0.75rem', pl: 1, pr: 0.5, py: 0.5 }}>
-                                    {obj.title}
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Box sx={{ flexGrow: 1 }}>{obj.title}</Box>
+                                        <IconButton size="small" onClick={() => handleExclude(obj.id)} sx={{ opacity: 0.2, '&:hover': { opacity: 1 } }}>
+                                            <DeleteOutlineIcon fontSize="inherit" />
+                                        </IconButton>
+                                    </Box>
                                 </TableCell>
                                 {DAYS.map((_, index) => {
                                     const dateObj = new Date(currentWeekStart);
