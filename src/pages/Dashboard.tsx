@@ -126,7 +126,11 @@ export default function Dashboard() {
                         effectiveStart.setDate(effectiveStart.getDate() + 7);
                     }
 
-                    if (weekStart < effectiveStart) return false;
+                    if (weekStart < effectiveStart) {
+                        // Override: If logs exist for this objective this week, INCLUDE it (user manual entry)
+                        const hasLogs = weekLogs.some(l => l.objective_id === obj.id && l.is_completed);
+                        if (!hasLogs) return false;
+                    }
                 }
 
                 return true;
