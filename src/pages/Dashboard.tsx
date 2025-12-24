@@ -95,11 +95,41 @@ export default function Dashboard() {
             const weekLogs = weeks[weekStartIso];
 
             // Determine active objectives for THIS week
+            // Determine active objectives for THIS week
             const weekActiveObjectives = filteredObjectives.filter(obj => { // Note: filteredObjectives is global for child, but we need time-sensitivity
-                // We re-filter from ALL objectives for this child to be safe, but filteredObjectives is already child-filtered.
-                // Just need time check.
-                if (!obj.deleted_at) return true;
-                return parseISO(obj.deleted_at) > weekStart;
+                // 1. Soft Delete Check
+                if (obj.deleted_at && parseISO(obj.deleted_at) <= weekStart) return false;
+
+                // 2. Exclusions Check
+                // weekStart is Date object here? No, parseISO returns Date.
+                // We need the YYYY-MM-DD string of the Monday
+                const sy = weekStart.getFullYear();
+                const sm = String(weekStart.getMonth() + 1).padStart(2, '0');
+                const sd = String(weekStart.getDate()).padStart(2, '0');
+                const weekStr = `${sy}-${sm}-${sd}`;
+
+                const isExcluded = exclusions.some(ex => ex.objective_id === obj.id && ex.week_start === weekStr);
+                if (isExcluded) return false;
+
+                // 3. Smart Start Check
+                if (obj.created_at) {
+                    const created = parseISO(obj.created_at);
+                    const day = created.getDay();
+                    const diff = created.getDate() - day + (day === 0 ? -6 : 1);
+                    const creationMon = new Date(created);
+                    creationMon.setDate(diff);
+                    creationMon.setHours(0, 0, 0, 0);
+
+                    let effectiveStart = new Date(creationMon);
+                    const isMonday = created.getDay() === 1;
+                    if (!isMonday) {
+                        effectiveStart.setDate(effectiveStart.getDate() + 7);
+                    }
+
+                    if (weekStart < effectiveStart) return false;
+                }
+
+                return true;
             });
 
             if (weekActiveObjectives.length === 0) return;
