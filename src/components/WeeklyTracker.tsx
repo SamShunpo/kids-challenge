@@ -41,6 +41,7 @@ export default function WeeklyTracker({ childId, objectives, exclusions, onUpdat
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentWeekStart, setCurrentWeekStart] = useState(getMonday(new Date()));
+    const [showAll, setShowAll] = useState(false);
 
     useEffect(() => {
         fetchLogs();
@@ -50,6 +51,7 @@ export default function WeeklyTracker({ childId, objectives, exclusions, onUpdat
         const newDate = new Date(currentWeekStart);
         newDate.setDate(newDate.getDate() + (offset * 7));
         setCurrentWeekStart(newDate);
+        setShowAll(false); // Reset showAll when changing week
     };
 
     const fetchLogs = async () => {
@@ -142,7 +144,7 @@ export default function WeeklyTracker({ childId, objectives, exclusions, onUpdat
             const { error } = await supabase.from('objective_exclusions').insert({
                 objective_id: objId,
                 week_start: weekStr,
-                child_id: childId
+                child_id: childId // Ensure child_id is sent!
             });
 
             if (error) throw error;
@@ -172,7 +174,7 @@ export default function WeeklyTracker({ childId, objectives, exclusions, onUpdat
 
         // 3. Check Creation Date (Smart Start)
         // Rule: If created on Mon, active this week. If Tue+, active next week.
-        if (obj.created_at) {
+        if (!showAll && obj.created_at) {
             const created = new Date(obj.created_at);
             // Get Monday of creation week
             const day = created.getDay();
@@ -236,11 +238,31 @@ export default function WeeklyTracker({ childId, objectives, exclusions, onUpdat
     endDate.setDate(endDate.getDate() + 6);
     const rangeStr = `${currentWeekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
 
+    const isPastWeek = currentWeekStart < getMonday(new Date());
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <IconButton onClick={() => changeWeek(-1)} size="small"><ChevronLeftIcon /></IconButton>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{rangeStr}</Typography>
+                <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', lineHeight: 1 }}>{rangeStr}</Typography>
+                    {isPastWeek && (
+                        <Box
+                            component="span"
+                            onClick={() => setShowAll(!showAll)}
+                            sx={{
+                                fontSize: '0.7rem',
+                                color: 'primary.main',
+                                textDecoration: 'underline',
+                                cursor: 'pointer',
+                                display: 'block',
+                                mt: 0.5
+                            }}
+                        >
+                            {showAll ? 'Masquer inactifs' : 'Voir tout'}
+                        </Box>
+                    )}
+                </Box>
                 <IconButton onClick={() => changeWeek(1)} size="small"><ChevronRightIcon /></IconButton>
             </Box>
 
@@ -255,18 +277,22 @@ export default function WeeklyTracker({ childId, objectives, exclusions, onUpdat
                 <Table size="small">
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={{ pl: 1, pr: 0.5, py: 0.5, fontSize: '0.75rem' }}>Objectif</TableCell>
-                            {DAYS.map(d => <TableCell key={d} align="center" padding="none" sx={{ width: 32, fontSize: '0.75rem' }}>{d[0]}</TableCell>)}
+                            <TableCell sx={{ pl: 1, pr: 0, py: 0.5, fontSize: '0.7rem', width: 'auto' }}>Objectif</TableCell>
+                            {DAYS.map(d => <TableCell key={d} align="center" padding="none" sx={{ width: 28, fontSize: '0.7rem' }}>{d[0]}</TableCell>)}
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {activeObjectives.map(obj => (
                             <TableRow key={obj.id}>
-                                <TableCell component="th" scope="row" sx={{ fontSize: '0.75rem', pl: 1, pr: 0.5, py: 0.5 }}>
+                                <TableCell component="th" scope="row" sx={{ fontSize: '0.75rem', pl: 1, pr: 0, py: 0.5 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                        <Box sx={{ flexGrow: 1 }}>{obj.title}</Box>
-                                        <IconButton size="small" onClick={() => handleExclude(obj.id)} sx={{ opacity: 0.2, '&:hover': { opacity: 1 } }}>
-                                            <DeleteOutlineIcon fontSize="inherit" />
+                                        <Box sx={{ flexGrow: 1, lineHeight: 1.1 }}>{obj.title}</Box>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleExclude(obj.id)}
+                                            sx={{ opacity: 0.2, p: 0.2, '&:hover': { opacity: 1 }, ml: 0.5 }}
+                                        >
+                                            <DeleteOutlineIcon sx={{ fontSize: '1rem' }} />
                                         </IconButton>
                                     </Box>
                                 </TableCell>
